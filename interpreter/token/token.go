@@ -16,14 +16,17 @@ const (
 	INT   = "INT"
 
 	// Operatos
-	ASSIGN  = "="
-	PLUS    = "+"
-	MINUS   = "-"
-	BANG    = "!"
-	STAR    = "*"
-	SLASH   = "/"
-	LESS    = "<"
-	GREATER = ">"
+	ASSIGN = "="
+	PLUS   = "+"
+	MINUS  = "-"
+	BANG   = "!"
+	STAR   = "*"
+	SLASH  = "/"
+
+	LESS     = "<"
+	GREATER  = ">"
+	EQUAL    = "=="
+	NOTEQUAL = "!="
 
 	// Delimiters
 	COMMA     = ","
