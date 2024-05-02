@@ -312,6 +312,18 @@ func TestOperatorPrecedenceParsing(tester *testing.T) {
 			"!(true == true)",
 			"(!(true == true))",
 		},
+		{
+			"a + add(b * c) + d",
+			"((a + add((b * c))) + d)",
+		},
+		{
+			"add(a, b, 1, 2 * 3, 4 + 5, add(6, 7 * 8))",
+			"add(a, b, 1, (2 * 3), (4 + 5), add(6, (7 * 8)))",
+		},
+		{
+			"add(a + b + c * d / f + g)",
+			"add((((a + b) + ((c * d) / f)) + g))",
+		},
 	}
 
 	for _, testcase := range tests {
@@ -451,6 +463,44 @@ func TestFunctionParameterParsing(tester *testing.T) {
 			testLiteralExpression(tester, function.Parameters[i], identifier)
 		}
 	}
+}
+
+func TestCallExpressionParsing(tester *testing.T) {
+	input := "add(1, 2 * 3, 4 + 5);"
+
+	lexer := lexer.New(input)
+	parser := New(lexer)
+	program := parser.ParseProgram()
+	checkParserErrors(tester, parser)
+
+	if len(program.Statements) != 1 {
+		tester.Fatalf("program.Statements does not contain %d statements. got=%d\n",
+			1, len(program.Statements))
+	}
+
+	statement, ok := program.Statements[0].(*ast.ExpressionStatement)
+	if !ok {
+		tester.Fatalf("statement is not ast.ExpressionStatement. got=%T",
+			program.Statements[0])
+	}
+
+	expression, ok := statement.Expression.(*ast.CallExpression)
+	if !ok {
+		tester.Fatalf("statement.Expression is not ast.CallExpression. got=%T",
+			statement.Expression)
+	}
+
+	if !testIdentifier(tester, expression.Function, "add") {
+		return
+	}
+
+	if len(expression.Arguments) != 3 {
+		tester.Fatalf("wrong number of arguments. got=%d", len(expression.Arguments))
+	}
+
+	testLiteralExpression(tester, expression.Arguments[0], 1)
+	testInfixExpression(tester, expression.Arguments[1], 2, "*", 3)
+	testInfixExpression(tester, expression.Arguments[2], 4, "+", 5)
 }
 
 func testLetStatement(tester *testing.T, statement ast.Statement, name string) bool {
