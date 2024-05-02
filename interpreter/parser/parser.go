@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"monkey/ast"
 	"monkey/lexer"
-    "monkey/token"
+	"monkey/token"
 	"strconv"
 )
 
@@ -115,8 +115,11 @@ func (parser *Parser) parseLetStatement() *ast.LetStatement {
 		return nil
 	}
 
-	// TODO
-	for !parser.currentTokenIs(token.SEMICOLON) {
+	parser.nextToken()
+
+	statement.Value = parser.parseExpression(LOWEST)
+
+	if parser.peekTokenIs(token.SEMICOLON) {
 		parser.nextToken()
 	}
 
@@ -128,8 +131,9 @@ func (parser *Parser) parseReturnStatement() *ast.ReturnStatement {
 
 	parser.nextToken()
 
-	// TODO
-	for !parser.currentTokenIs(token.SEMICOLON) {
+	statement.ReturnValue = parser.parseExpression(LOWEST)
+
+	if parser.peekTokenIs(token.SEMICOLON) {
 		parser.nextToken()
 	}
 
@@ -393,7 +397,7 @@ var precedences = map[token.TokenType]int{
 	token.MINUS:    SUM,
 	token.STAR:     PRODUCT,
 	token.SLASH:    PRODUCT,
-    token.LPAREN:   CALL,
+	token.LPAREN:   CALL,
 }
 
 type (

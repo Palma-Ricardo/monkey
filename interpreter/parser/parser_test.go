@@ -8,38 +8,37 @@ import (
 )
 
 func TestLetStatements(tester *testing.T) {
-	input := `
-let x = 5;
-let y = 10;
-let foobar = 838383;
-`
-	lexer := lexer.New(input)
-	parser := New(lexer)
-
-	program := parser.ParseProgram()
-	checkParserErrors(tester, parser)
-	if program == nil {
-		tester.Fatalf("ParseProgram() returned nil")
-	}
-	if len(program.Statements) != 3 {
-		tester.Fatalf("program.Statements does not contain 3 statements. got=%d",
-			len(program.Statements))
-	}
-
 	tests := []struct {
+		input              string
 		expectedIdentifier string
+		expectedValue      interface{}
 	}{
-		{"x"},
-		{"y"},
-		{"foobar"},
+		{"let x = 5;", "x", 5},
+		{"let y = true;", "y", true},
+		{"let foobar = y;", "foobar", "y"},
 	}
+	for _, testcase := range tests {
+		lexer := lexer.New(testcase.input)
+		parser := New(lexer)
+		program := parser.ParseProgram()
+		checkParserErrors(tester, parser)
 
-	for i, testcase := range tests {
-		statement := program.Statements[i]
+		if len(program.Statements) != 1 {
+			tester.Fatalf("program.Statements does not contain 1 statements. got=%d",
+				len(program.Statements))
+		}
+
+		statement := program.Statements[0]
 		if !testLetStatement(tester, statement, testcase.expectedIdentifier) {
 			return
 		}
+
+		value := statement.(*ast.LetStatement).Value
+		if !testLiteralExpression(tester, value, testcase.expectedValue) {
+			return
+		}
 	}
+
 }
 
 func TestReturnStatements(tester *testing.T) {
