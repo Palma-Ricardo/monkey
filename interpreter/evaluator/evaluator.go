@@ -244,23 +244,29 @@ func isTruthy(obj object.Object) bool {
 }
 
 func evalIdentifier(node *ast.Identifier, env *object.Environment) object.Object {
-	value, ok := env.Get(node.Value)
-	if !ok {
-		return newError("identifier not found: " + node.Value)
+	if value, ok := env.Get(node.Value); ok {
+		return value
 	}
 
-	return value
+	if builtin, ok := builtins[node.Value]; ok {
+		return builtin
+	}
+
+	return newError("identifier not found: " + node.Value)
 }
 
 func applyFunction(fn object.Object, arguments []object.Object) object.Object {
-	function, ok := fn.(*object.Function)
-	if !ok {
-		return newError("not a function: %s", fn.Type())
-	}
+	switch function := fn.(type) {
+	case *object.Function:
+		extendedEnv := extendFunctionEnv(function, arguments)
+		evaluated := Eval(function.Body, extendedEnv)
+		return unwrapReturnValue(evaluated)
 
-	extendedEnv := extendFunctionEnv(function, arguments)
-	evaluated := Eval(function.Body, extendedEnv)
-	return unwrapReturnValue(evaluated)
+	case *object.Builtin:
+		return function.Fn(arguments...)
+	default:
+		return newError("not a function: %s", function.Type())
+	}
 }
 
 func extendFunctionEnv(fn *object.Function, arguments []object.Object) *object.Environment {
