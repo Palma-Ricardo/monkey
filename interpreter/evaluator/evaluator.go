@@ -75,8 +75,8 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 		}
 
 		return applyFunction(function, arguments)
-    case *ast.StringLiteral:
-        return &object.String{Value: node.Value}
+	case *ast.StringLiteral:
+		return &object.String{Value: node.Value}
 	}
 
 	return nil
@@ -149,6 +149,8 @@ func evalInfixExpression(operator string, left, right object.Object) object.Obje
 	switch {
 	case left.Type() == object.INTEGER_OBJECT && right.Type() == object.INTEGER_OBJECT:
 		return evalIntegerInfixExpression(operator, left, right)
+	case left.Type() == object.STRING_OBJECT && right.Type() == object.STRING_OBJECT:
+		return evalStringInfixExpression(operator, left, right)
 	case operator == "==":
 		return nativeBoolToBooleanObject(left == right)
 	case operator == "!=":
@@ -184,6 +186,16 @@ func evalIntegerInfixExpression(operator string, left, right object.Object) obje
 	default:
 		return newError("unknown operator: %s %s %s", left.Type(), operator, right.Type())
 	}
+}
+
+func evalStringInfixExpression(operator string, left, right object.Object) object.Object {
+	if operator != "+" {
+		return newError("unknown operator: %s %s %s", left.Type(), operator, right.Type())
+	}
+
+	leftValue := left.(*object.String).Value
+	rightValue := right.(*object.String).Value
+	return &object.String{Value: leftValue + rightValue}
 }
 
 func evalIfExpression(ie *ast.IfExpression, env *object.Environment) object.Object {
@@ -252,21 +264,21 @@ func applyFunction(fn object.Object, arguments []object.Object) object.Object {
 }
 
 func extendFunctionEnv(fn *object.Function, arguments []object.Object) *object.Environment {
-    env := object.NewEnclosedEnvironment(fn.Env)
+	env := object.NewEnclosedEnvironment(fn.Env)
 
-    for index, parameter := range fn.Parameters {
-        env.Set(parameter.Value, arguments[index])
-    }
-    
-    return env
+	for index, parameter := range fn.Parameters {
+		env.Set(parameter.Value, arguments[index])
+	}
+
+	return env
 }
 
 func unwrapReturnValue(obj object.Object) object.Object {
-    if returnValue, ok := obj.(*object.ReturnValue); ok {
-        return returnValue.Value
-    }
+	if returnValue, ok := obj.(*object.ReturnValue); ok {
+		return returnValue.Value
+	}
 
-    return obj
+	return obj
 }
 
 func nativeBoolToBooleanObject(input bool) *object.Boolean {

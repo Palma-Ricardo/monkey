@@ -183,6 +183,10 @@ func TestErrorHandling(tester *testing.T) {
 			"foobar",
 			"identifier not found: foobar",
 		},
+		{
+			`"Hello" - "World"`,
+			"unknown operator: STRING - STRING",
+		},
 	}
 
 	for _, testcase := range tests {
@@ -262,6 +266,20 @@ func TestFunctionCalling(tester *testing.T) {
 
 func TestStringLiteral(tester *testing.T) {
 	input := `"Hello World!"`
+
+	evaluated := testEval(input)
+	str, ok := evaluated.(*object.String)
+	if !ok {
+		tester.Fatalf("object is not String. got=%T (%+v)", evaluated, evaluated)
+	}
+
+	if str.Value != "Hello World!" {
+		tester.Errorf("String has wrong value. got=%q", str.Value)
+	}
+}
+
+func TestStringConcatenation(tester *testing.T) {
+	input := `"Hello" + " " + "World!"`
 
 	evaluated := testEval(input)
 	str, ok := evaluated.(*object.String)
