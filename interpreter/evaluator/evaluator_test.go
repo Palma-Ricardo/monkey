@@ -308,19 +308,95 @@ func TestBuiltinFunctions(tester *testing.T) {
 		evaluated := testEval(testcase.input)
 
 		switch expected := testcase.expected.(type) {
-        case int:
-            testIntegerObject(tester, evaluated, int64(expected))
-        case string:
-            errorObject, ok := evaluated.(*object.Error)
-            if !ok {
-                tester.Errorf("object is not Error. got=%T (%+v)", evaluated, evaluated)
-                continue
-            }
+		case int:
+			testIntegerObject(tester, evaluated, int64(expected))
+		case string:
+			errorObject, ok := evaluated.(*object.Error)
+			if !ok {
+				tester.Errorf("object is not Error. got=%T (%+v)", evaluated, evaluated)
+				continue
+			}
 
-            if errorObject.Message != expected {
-                tester.Errorf("wrong error message. expected=%q, got=%q", 
-                    expected, errorObject.Message)
-            }
+			if errorObject.Message != expected {
+				tester.Errorf("wrong error message. expected=%q, got=%q",
+					expected, errorObject.Message)
+			}
+		}
+	}
+}
+
+func TestArrayLiterals(tester *testing.T) {
+	input := "[1, 2 * 2, 3 + 3]"
+
+	evaluated := testEval(input)
+	result, ok := evaluated.(*object.Array)
+	if !ok {
+		tester.Fatalf("object is not an Array. got=%T (%+v)", evaluated, evaluated)
+	}
+
+	if len(result.Elements) != 3 {
+		tester.Fatalf("array has wrong number of elements. got=%d", len(result.Elements))
+	}
+
+	testIntegerObject(tester, result.Elements[0], 1)
+	testIntegerObject(tester, result.Elements[1], 4)
+	testIntegerObject(tester, result.Elements[2], 6)
+}
+
+func TestArrayIndexExpressions(tester *testing.T) {
+	tests := []struct {
+		input    string
+		expected interface{}
+	}{
+		{
+			"[1, 2, 3][0]",
+			1,
+		},
+		{
+			"[1, 2, 3][1]",
+			2,
+		},
+		{
+			"[1, 2, 3][2]",
+			3,
+		},
+		{
+			"let i = 0; [1][i];",
+			1,
+		},
+		{
+			"[1, 2, 3][1 + 1];",
+			3,
+		},
+		{
+			"let myArray = [1, 2, 3]; myArray[2];",
+			3,
+		},
+		{
+			"let myArray = [1, 2, 3]; myArray[0] + myArray[1] + myArray[2];",
+			6,
+		},
+		{
+			"let myArray = [1, 2, 3]; let i = myArray[0]; myArray[i]",
+			2,
+		},
+		{
+			"[1, 2, 3][3]",
+			nil,
+		},
+		{
+			"[1, 2, 3][-1]",
+			nil,
+		},
+	}
+
+	for _, testcase := range tests {
+		evaluated := testEval(testcase.input)
+		integer, ok := testcase.expected.(int)
+		if ok {
+			testIntegerObject(tester, evaluated, int64(integer))
+		} else {
+			testNullObject(tester, evaluated)
 		}
 	}
 }
