@@ -1,9 +1,9 @@
 package ast
 
 import (
-	"bytes"
+    "bytes"
+    "strings"
 	"monkey/token"
-	"strings"
 )
 
 type Node interface {
