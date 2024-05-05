@@ -187,6 +187,10 @@ func TestErrorHandling(tester *testing.T) {
 			`"Hello" - "World"`,
 			"unknown operator: STRING - STRING",
 		},
+		{
+			`{"name": "Monkey"}[fn(x) { x }];`,
+			"unusable as hash key: FUNCTION",
+		},
 	}
 
 	for _, testcase := range tests {
@@ -387,6 +391,92 @@ func TestArrayIndexExpressions(tester *testing.T) {
 		{
 			"[1, 2, 3][-1]",
 			nil,
+		},
+	}
+
+	for _, testcase := range tests {
+		evaluated := testEval(testcase.input)
+		integer, ok := testcase.expected.(int)
+		if ok {
+			testIntegerObject(tester, evaluated, int64(integer))
+		} else {
+			testNullObject(tester, evaluated)
+		}
+	}
+}
+
+func TestHashLiterals(tester *testing.T) {
+	input := `let two = "two";
+    {
+        "one": 10 - 9,
+        two: 1 + 1,
+        "thr" + "ee": 6 / 2,
+        4: 4,
+        true: 5,
+        false: 6
+    }`
+
+	evaluated := testEval(input)
+	result, ok := evaluated.(*object.Hash)
+	if !ok {
+		tester.Fatalf("Eval didn't return Hash. got=%T (%+v)", evaluated, evaluated)
+	}
+
+	expected := map[object.HashKey]int64{
+		(&object.String{Value: "one"}).HashKey():   1,
+		(&object.String{Value: "two"}).HashKey():   2,
+		(&object.String{Value: "three"}).HashKey(): 3,
+		(&object.Integer{Value: 4}).HashKey():      4,
+		TRUE.HashKey():                             5,
+		FALSE.HashKey():                            6,
+	}
+
+	if len(result.Pairs) != len(expected) {
+		tester.Fatalf("Hash has wrong number of pairs. got=%d", len(result.Pairs))
+	}
+
+	for expectedKey, expectedValue := range expected {
+		pair, ok := result.Pairs[expectedKey]
+		if !ok {
+			tester.Errorf("no pair for given key in Pairs")
+		}
+
+		testIntegerObject(tester, pair.Value, expectedValue)
+	}
+}
+
+func TestHashIndexExpressions(tester *testing.T) {
+	tests := []struct {
+		input    string
+		expected interface{}
+	}{
+		{
+			`{"foo": 5}["foo"]`,
+			5,
+		},
+		{
+			`{"foo": 5}["bar"]`,
+			nil,
+		},
+		{
+			`let key = "foo"; {"foo": 5}[key]`,
+			5,
+		},
+		{
+			`{}["foo"]`,
+			nil,
+		},
+		{
+			`{5: 5}[5]`,
+			5,
+		},
+		{
+			`{true: 5}[true]`,
+			5,
+		},
+		{
+			`{false: 5}[false]`,
+			5,
 		},
 	}
 
