@@ -255,9 +255,23 @@ func TestFunctionCalling(tester *testing.T) {
 		{"fn(x) { x; }(5)", 5},
 	}
 
-    for _, testcase := range tests {
-        testIntegerObject(tester, testEval(testcase.input), testcase.expected)
-    }
+	for _, testcase := range tests {
+		testIntegerObject(tester, testEval(testcase.input), testcase.expected)
+	}
+}
+
+func TestStringLiteral(tester *testing.T) {
+	input := `"Hello World!"`
+
+	evaluated := testEval(input)
+	str, ok := evaluated.(*object.String)
+	if !ok {
+		tester.Fatalf("object is not String. got=%T (%+v)", evaluated, evaluated)
+	}
+
+	if str.Value != "Hello World!" {
+		tester.Errorf("String has wrong value. got=%q", str.Value)
+	}
 }
 
 func testEval(input string) object.Object {

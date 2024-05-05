@@ -16,6 +16,7 @@ const (
 	RETURN_VALUE_OBJECT = "RETURN_VALUE"
 	ERROR_OBJECT        = "ERROR"
 	FUNCTION_OBJECT     = "FUNCTION"
+	STRING_OBJECT       = "STRING"
 )
 
 type Object interface {
@@ -64,19 +65,26 @@ type Function struct {
 
 func (fn *Function) Type() ObjectType { return FUNCTION_OBJECT }
 func (fn *Function) Inspect() string {
-    var out bytes.Buffer
+	var out bytes.Buffer
 
-    parameters := []string{}
-    for _, parameter := range fn.Parameters {
-        parameters = append(parameters, parameter.String())
-    }
+	parameters := []string{}
+	for _, parameter := range fn.Parameters {
+		parameters = append(parameters, parameter.String())
+	}
 
-    out.WriteString("fn")
-    out.WriteString("(")
-    out.WriteString(strings.Join(parameters, ", "))
-    out.WriteString(") {\n")
-    out.WriteString(fn.Body.String())
-    out.WriteString("\n}")
+	out.WriteString("fn")
+	out.WriteString("(")
+	out.WriteString(strings.Join(parameters, ", "))
+	out.WriteString(") {\n")
+	out.WriteString(fn.Body.String())
+	out.WriteString("\n}")
 
-    return out.String()
+	return out.String()
 }
+
+type String struct {
+	Value string
+}
+
+func (str *String) Type() ObjectType { return STRING_OBJECT }
+func (str *String) Inspect() string  { return str.Value }
