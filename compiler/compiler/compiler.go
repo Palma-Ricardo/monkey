@@ -46,6 +46,7 @@ func (c *Compiler) Compile(node ast.Node) error {
 		if error != nil {
 			return error
 		}
+		c.emit(code.OpPop)
 
 	case *ast.InfixExpression:
 		error := c.Compile(node.Left)

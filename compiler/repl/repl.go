@@ -4,10 +4,10 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	"monkey/compiler"
 	"monkey/lexer"
 	"monkey/parser"
-    "monkey/compiler"
-    "monkey/vm"
+	"monkey/vm"
 )
 
 const PROMPT = ">> "
@@ -44,23 +44,23 @@ func Start(in io.Reader, out io.Writer) {
 			continue
 		}
 
-        compiler := compiler.New()
-        error := compiler.Compile(program)
-        if error != nil {
-            fmt.Fprintf(out, "Whoops! Compilation failed:\n %s\n", error)
-            continue
-        }
+		compiler := compiler.New()
+		error := compiler.Compile(program)
+		if error != nil {
+			fmt.Fprintf(out, "Whoops! Compilation failed:\n %s\n", error)
+			continue
+		}
 
-        machine := vm.New(compiler.Bytecode())
-        error = machine.Run()
-        if error != nil {
-            fmt.Fprintf(out, "Whoops! Executing bytecode failed:\n %s\n", error)
-            continue
-        }
+		machine := vm.New(compiler.Bytecode())
+		error = machine.Run()
+		if error != nil {
+			fmt.Fprintf(out, "Whoops! Executing bytecode failed:\n %s\n", error)
+			continue
+		}
 
-        stackTop := machine.StackTop()
-        io.WriteString(out, stackTop.Inspect())
-        io.WriteString(out, "\n")
+		lastPoppedItem := machine.LastPoppedStackElem()
+		io.WriteString(out, lastPoppedItem.Inspect())
+		io.WriteString(out, "\n")
 	}
 }
 
