@@ -17,6 +17,9 @@ type VM struct {
 	stackPointer int
 }
 
+var True = &object.Boolean{Value: true}
+var False = &object.Boolean{Value: false}
+
 func New(bytecode *compiler.Bytecode) *VM {
 	return &VM{
 		instructions: bytecode.Instructions,
@@ -46,6 +49,16 @@ func (vm *VM) Run() error {
 			}
 		case code.OpAdd, code.OpSub, code.OpMul, code.OpDiv:
 			error := vm.executeBinaryOperation(op)
+			if error != nil {
+				return error
+			}
+		case code.OpTrue:
+			error := vm.push(True)
+			if error != nil {
+				return error
+			}
+		case code.OpFalse:
+			error := vm.push(False)
 			if error != nil {
 				return error
 			}
