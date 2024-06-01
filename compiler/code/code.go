@@ -56,8 +56,8 @@ const (
 	OpSub
 	OpMul
 	OpDiv
-    OpBang
-    OpMinus
+	OpBang
+	OpMinus
 
 	OpTrue
 	OpFalse
@@ -65,6 +65,9 @@ const (
 	OpEqual
 	OpNotEqual
 	OpGreaterThan
+
+	OpJumpNotTrue
+	OpJump
 
 	OpPop
 )
@@ -77,12 +80,12 @@ type Definition struct {
 var definitions = map[Opcode]*Definition{
 	OpConstant: {"OpConstant", []int{2}},
 
-	OpAdd: {"OpAdd", []int{}},
-	OpSub: {"OpSub", []int{}},
-	OpMul: {"OpMul", []int{}},
-	OpDiv: {"OpDiv", []int{}},
-    OpBang: {"OpBang", []int{}},
-    OpMinus: {"OpMinus", []int{}},
+	OpAdd:   {"OpAdd", []int{}},
+	OpSub:   {"OpSub", []int{}},
+	OpMul:   {"OpMul", []int{}},
+	OpDiv:   {"OpDiv", []int{}},
+	OpBang:  {"OpBang", []int{}},
+	OpMinus: {"OpMinus", []int{}},
 
 	OpTrue:  {"OpTrue", []int{}},
 	OpFalse: {"OpFalse", []int{}},
@@ -90,6 +93,9 @@ var definitions = map[Opcode]*Definition{
 	OpEqual:       {"OpEqual", []int{}},
 	OpNotEqual:    {"OpNotEqual", []int{}},
 	OpGreaterThan: {"OpGreaterThan", []int{}},
+
+	OpJumpNotTrue: {"OpJumpNotTrue", []int{2}},
+	OpJump:        {"OpJump", []int{2}},
 
 	OpPop: {"OpPop", []int{}},
 }

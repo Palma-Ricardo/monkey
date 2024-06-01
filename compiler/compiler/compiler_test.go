@@ -36,7 +36,7 @@ func runCompilerTests(tester *testing.T, tests []compilerTestCase) {
 			tester.Fatalf("testInstructions failed: %s", error)
 		}
 
-		error = testConstants(tester, testcase.expectedConstants, bytecode.Constants)
+		error = testConstants(testcase.expectedConstants, bytecode.Constants)
 		if error != nil {
 			tester.Fatalf("testConstans failed: %s", error)
 		}
@@ -77,7 +77,7 @@ func concatenateInstructions(source []code.Instructions) code.Instructions {
 	return output
 }
 
-func testConstants(tester *testing.T, expected []interface{}, actual []object.Object) error {
+func testConstants(expected []interface{}, actual []object.Object) error {
 	if len(expected) != len(actual) {
 		return fmt.Errorf("wrong number of constants. got=%d, want=%d",
 			len(actual), len(expected))
@@ -262,6 +262,39 @@ func TestBooleanExpressions(tester *testing.T) {
 			expectedInstructions: []code.Instructions{
 				code.Make(code.OpTrue),
 				code.Make(code.OpBang),
+				code.Make(code.OpPop),
+			},
+		},
+	}
+
+	runCompilerTests(tester, tests)
+}
+
+func TestConditionals(tester *testing.T) {
+	tests := []compilerTestCase{
+		{
+			input:             "if (true) { 10 }; 3333;",
+			expectedConstants: []interface{}{10, 3333},
+			expectedInstructions: []code.Instructions{
+				code.Make(code.OpTrue),
+				code.Make(code.OpJumpNotTrue, 7),
+				code.Make(code.OpConstant, 0),
+				code.Make(code.OpPop),
+				code.Make(code.OpConstant, 1),
+				code.Make(code.OpPop),
+			},
+		},
+		{
+			input:             "if (true) { 10 } else { 20 }; 3333;",
+			expectedConstants: []interface{}{10, 20, 3333},
+			expectedInstructions: []code.Instructions{
+				code.Make(code.OpTrue),
+				code.Make(code.OpJumpNotTrue, 10),
+				code.Make(code.OpConstant, 0),
+				code.Make(code.OpJump, 13),
+				code.Make(code.OpConstant, 1),
+				code.Make(code.OpPop),
+				code.Make(code.OpConstant, 2),
 				code.Make(code.OpPop),
 			},
 		},

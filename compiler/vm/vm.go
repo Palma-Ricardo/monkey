@@ -72,11 +72,22 @@ func (vm *VM) Run() error {
 			if error != nil {
 				return error
 			}
-        case code.OpMinus:
-            error := vm.executeMinusOperator()
-            if error != nil {
-                return error
-            }
+		case code.OpMinus:
+			error := vm.executeMinusOperator()
+			if error != nil {
+				return error
+			}
+		case code.OpJump:
+			position := int(code.ReadUint16(vm.instructions[instructionPointer+1:]))
+			instructionPointer = position - 1
+		case code.OpJumpNotTrue:
+			position := int(code.ReadUint16(vm.instructions[instructionPointer+1:]))
+			instructionPointer += 2
+
+			condition := vm.pop()
+			if !isTruthy(condition) {
+				instructionPointer = position - 1
+			}
 
 		case code.OpPop:
 			vm.pop()
@@ -188,14 +199,14 @@ func (vm *VM) executeBangOperator() error {
 }
 
 func (vm *VM) executeMinusOperator() error {
-    operand := vm.pop()
+	operand := vm.pop()
 
-    if operand.Type() != object.INTEGER_OBJECT {
-        return fmt.Errorf("unsupported type for negation: %s", operand.Type())
-    }
+	if operand.Type() != object.INTEGER_OBJECT {
+		return fmt.Errorf("unsupported type for negation: %s", operand.Type())
+	}
 
-    value := operand.(*object.Integer).Value
-    return vm.push(&object.Integer{Value: -value})
+	value := operand.(*object.Integer).Value
+	return vm.push(&object.Integer{Value: -value})
 }
 
 func nativeBoolToBooleanObject(input bool) *object.Boolean {
@@ -204,4 +215,13 @@ func nativeBoolToBooleanObject(input bool) *object.Boolean {
 	}
 
 	return False
+}
+
+func isTruthy(obj object.Object) bool {
+	switch obj := obj.(type) {
+	case *object.Boolean:
+		return obj.Value
+	default:
+		return true
+	}
 }
