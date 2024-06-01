@@ -32,7 +32,7 @@ func runCompilerTests(tester *testing.T, tests []compilerTestCase) {
 
 		error = testInstructions(testcase.expectedInstructions, bytecode.Instructions)
 		if error != nil {
-            fmt.Printf("Input: %s", testcase.input)
+			fmt.Printf("Input: %s", testcase.input)
 			tester.Fatalf("testInstructions failed: %s", error)
 		}
 
@@ -164,6 +164,15 @@ func TestIntegerArithmetic(tester *testing.T) {
 				code.Make(code.OpPop),
 			},
 		},
+		{
+			input:             "-1",
+			expectedConstants: []interface{}{1},
+			expectedInstructions: []code.Instructions{
+				code.Make(code.OpConstant, 0),
+				code.Make(code.OpMinus),
+				code.Make(code.OpPop),
+			},
+		},
 	}
 
 	runCompilerTests(tester, tests)
@@ -244,6 +253,15 @@ func TestBooleanExpressions(tester *testing.T) {
 				code.Make(code.OpTrue),
 				code.Make(code.OpFalse),
 				code.Make(code.OpNotEqual),
+				code.Make(code.OpPop),
+			},
+		},
+		{
+			input:             "!true",
+			expectedConstants: []interface{}{},
+			expectedInstructions: []code.Instructions{
+				code.Make(code.OpTrue),
+				code.Make(code.OpBang),
 				code.Make(code.OpPop),
 			},
 		},
