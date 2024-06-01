@@ -130,7 +130,9 @@ func (c *Compiler) Compile(node ast.Node) error {
 		if error != nil {
 			return error
 		}
+
 		jumpNotTruePos := c.emit(code.OpJumpNotTrue, 9999)
+
 		error = c.Compile(node.Consequence)
 		if error != nil {
 			return error
@@ -140,27 +142,26 @@ func (c *Compiler) Compile(node ast.Node) error {
 			c.removeLastPop()
 		}
 
+		jumpPos := c.emit(code.OpJump, 9999)
+
+		afterConsequencePos := len(c.instructions)
+		c.changeOperand(jumpNotTruePos, afterConsequencePos)
+
 		if node.Alternative == nil {
-			afterConsequencePos := len(c.instructions)
-			c.changeOperand(jumpNotTruePos, afterConsequencePos)
+			c.emit(code.OpNull)
 		} else {
-            jumpPos := c.emit(code.OpJump, 9999)
+			error := c.Compile(node.Alternative)
+			if error != nil {
+				return error
+			}
 
-			afterConsequencePos := len(c.instructions)
-			c.changeOperand(jumpNotTruePos, afterConsequencePos)
-
-            error := c.Compile(node.Alternative)
-            if error != nil {
-                return error
-            }
-
-            if c.lastInstructionIs(code.OpPop) {
-                c.removeLastPop()
-            }
-
-            afterAlternativePos := len(c.instructions)
-            c.changeOperand(jumpPos, afterAlternativePos)
+			if c.lastInstructionIs(code.OpPop) {
+				c.removeLastPop()
+			}
 		}
+
+		afterAlternativePos := len(c.instructions)
+		c.changeOperand(jumpPos, afterAlternativePos)
 
 	case *ast.IntegerLiteral:
 		integer := &object.Integer{Value: node.Value}
