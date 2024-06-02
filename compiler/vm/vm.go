@@ -8,10 +8,12 @@ import (
 )
 
 const StackSize = 2048
+const GlobalsSize = 65535
 
 type VM struct {
 	constants    []object.Object
 	instructions code.Instructions
+	globals      []object.Object
 
 	stack        []object.Object
 	stackPointer int
@@ -25,10 +27,18 @@ func New(bytecode *compiler.Bytecode) *VM {
 	return &VM{
 		instructions: bytecode.Instructions,
 		constants:    bytecode.Constants,
+		globals:      make([]object.Object, GlobalsSize),
 
 		stack:        make([]object.Object, StackSize),
 		stackPointer: 0,
 	}
+}
+
+func NewWithGlobalsStore(bytecode *compiler.Bytecode, store []object.Object) *VM {
+    vm := New(bytecode)
+    vm.globals = store
+
+    return vm
 }
 
 func (vm *VM) LastPoppedStackElem() object.Object {
@@ -48,39 +58,62 @@ func (vm *VM) Run() error {
 			if error != nil {
 				return error
 			}
+
+		case code.OpSetGlobal:
+			globalIndex := code.ReadUint16(vm.instructions[instructionPointer+1:])
+			instructionPointer += 2
+
+			vm.globals[globalIndex] = vm.pop()
+
+		case code.OpGetGlobal:
+			globalIndex := code.ReadUint16(vm.instructions[instructionPointer+1:])
+			instructionPointer += 2
+
+			error := vm.push(vm.globals[globalIndex])
+			if error != nil {
+				return error
+			}
+
 		case code.OpAdd, code.OpSub, code.OpMul, code.OpDiv:
 			error := vm.executeBinaryOperation(op)
 			if error != nil {
 				return error
 			}
+
 		case code.OpTrue:
 			error := vm.push(True)
 			if error != nil {
 				return error
 			}
+
 		case code.OpFalse:
 			error := vm.push(False)
 			if error != nil {
 				return error
 			}
+
 		case code.OpEqual, code.OpNotEqual, code.OpGreaterThan:
 			error := vm.executeComparison(op)
 			if error != nil {
 				return error
 			}
+
 		case code.OpBang:
 			error := vm.executeBangOperator()
 			if error != nil {
 				return error
 			}
+
 		case code.OpMinus:
 			error := vm.executeMinusOperator()
 			if error != nil {
 				return error
 			}
+
 		case code.OpJump:
 			position := int(code.ReadUint16(vm.instructions[instructionPointer+1:]))
 			instructionPointer = position - 1
+
 		case code.OpJumpNotTrue:
 			position := int(code.ReadUint16(vm.instructions[instructionPointer+1:]))
 			instructionPointer += 2
@@ -89,6 +122,7 @@ func (vm *VM) Run() error {
 			if !isTruthy(condition) {
 				instructionPointer = position - 1
 			}
+
 		case code.OpNull:
 			error := vm.push(Null)
 			if error != nil {
