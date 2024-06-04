@@ -74,6 +74,18 @@ func (vm *VM) Run() error {
 				return error
 			}
 
+		case code.OpArray:
+			numberElements := int(code.ReadUint16(vm.instructions[instructionPointer+1:]))
+			instructionPointer += 2
+
+			array := vm.buildArray(vm.stackPointer-numberElements, vm.stackPointer)
+			vm.stackPointer = vm.stackPointer - numberElements
+
+			error := vm.push(array)
+			if error != nil {
+				return error
+			}
+
 		case code.OpAdd, code.OpSub, code.OpMul, code.OpDiv:
 			error := vm.executeBinaryOperation(op)
 			if error != nil {
@@ -279,4 +291,14 @@ func isTruthy(obj object.Object) bool {
 	default:
 		return true
 	}
+}
+
+func (vm *VM) buildArray(startIndex, endIndex int) object.Object {
+	elements := make([]object.Object, endIndex-startIndex)
+
+	for i := startIndex; i < endIndex; i++ {
+		elements[i-startIndex] = vm.stack[i]
+	}
+
+	return &object.Array{Elements: elements}
 }

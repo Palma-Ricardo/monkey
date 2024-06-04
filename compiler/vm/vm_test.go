@@ -106,6 +106,24 @@ func testExpectedObject(tester *testing.T, expected interface{}, actual object.O
 		if error != nil {
 			tester.Errorf("testStringObject failed: %s", error)
 		}
+	case []int:
+		array, ok := actual.(*object.Array)
+		if !ok {
+			tester.Errorf("object is not Array: %T (%+v)", actual, array)
+			return
+		}
+
+		if len(array.Elements) != len(expected) {
+			tester.Errorf("wrong number of elements. want=%d, got=%d", len(expected), len(array.Elements))
+			return
+		}
+
+		for i, expectedElement := range expected {
+			error := testIntegerObject(int64(expectedElement), array.Elements[i])
+			if error != nil {
+				tester.Errorf("testIntegerObject failed: %s", error)
+			}
+		}
 	case *object.Null:
 		if actual != Null {
 			tester.Errorf("object is not Null: %T (%+v)", actual, actual)
@@ -200,6 +218,16 @@ func TestStringExpressions(tester *testing.T) {
 		{`"monkey"`, "monkey"},
 		{`"mon" + "key"`, "monkey"},
 		{`"mon" + "key" + "banana"`, "monkeybanana"},
+	}
+
+	runVmTests(tester, tests)
+}
+
+func TestArrayLiterals(tester *testing.T) {
+	tests := []vmTestCase{
+		{"[]", []int{}},
+		{"[1, 2, 3]", []int{1, 2, 3}},
+		{"[1 + 2, 3 - 4, 5 + 6]", []int{3, -1, 11}},
 	}
 
 	runVmTests(tester, tests)

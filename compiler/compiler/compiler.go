@@ -190,6 +190,16 @@ func (c *Compiler) Compile(node ast.Node) error {
 		str := &object.String{Value: node.Value}
 		c.emit(code.OpConstant, c.addConstant(str))
 
+	case *ast.ArrayLiteral:
+		for _, element := range node.Elements {
+			error := c.Compile(element)
+			if error != nil {
+				return error
+			}
+		}
+
+		c.emit(code.OpArray, len(node.Elements))
+
 	case *ast.Boolean:
 		if node.Value {
 			c.emit(code.OpTrue)
