@@ -346,3 +346,14 @@ func TestFunctionsWithoutReturnValue(tester *testing.T) {
 
 	runVmTests(tester, tests)
 }
+
+func TestFirstClassFunctions(tester *testing.T) {
+	tests := []vmTestCase{
+		{
+			input:    "let returnsOne = fn() { 1; }; let returnsOneReturner = fn() { returnsOne; }; returnsOneReturner()();",
+			expected: 1,
+		},
+	}
+
+	runVmTests(tester, tests)
+}
