@@ -5,22 +5,24 @@ import (
 	"fmt"
 	"hash/fnv"
 	"monkey/ast"
+	"monkey/code"
 	"strings"
 )
 
 type ObjectType string
 
 const (
-	INTEGER_OBJECT      = "INTEGER"
-	BOOLEAN_OBJECT      = "BOOLEAN"
-	NULL_OBJECT         = "NULL"
-	RETURN_VALUE_OBJECT = "RETURN_VALUE"
-	ERROR_OBJECT        = "ERROR"
-	FUNCTION_OBJECT     = "FUNCTION"
-	STRING_OBJECT       = "STRING"
-	BUILTIN_OBJECT      = "BUILTIN"
-	ARRAY_OBJECT        = "ARRAY"
-	HASH_OBJECT         = "HASH"
+	INTEGER_OBJECT        = "INTEGER"
+	BOOLEAN_OBJECT        = "BOOLEAN"
+	NULL_OBJECT           = "NULL"
+	RETURN_VALUE_OBJECT   = "RETURN_VALUE"
+	ERROR_OBJECT          = "ERROR"
+	FUNCTION_OBJECT       = "FUNCTION"
+	STRING_OBJECT         = "STRING"
+	BUILTIN_OBJECT        = "BUILTIN"
+	ARRAY_OBJECT          = "ARRAY"
+	HASH_OBJECT           = "HASH"
+	COMPILED_FUNCTION_OBJ = "COMPILED_FUNCTION_OBJ"
 )
 
 type Object interface {
@@ -177,4 +179,13 @@ func (h *Hash) Inspect() string {
 	out.WriteString("}")
 
 	return out.String()
+}
+
+type CompiledFunction struct {
+	Instructions code.Instructions
+}
+
+func (cf *CompiledFunction) Type() ObjectType { return COMPILED_FUNCTION_OBJ }
+func (cf *CompiledFunction) Inspect() string {
+	return fmt.Sprintf("CompiledFunction[%p]", cf)
 }

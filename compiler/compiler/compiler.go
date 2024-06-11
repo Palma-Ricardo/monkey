@@ -2,20 +2,19 @@ package compiler
 
 import (
 	"fmt"
-    "sort"
 	"monkey/ast"
 	"monkey/code"
 	"monkey/object"
+	"sort"
 )
 
 type Compiler struct {
-	instructions code.Instructions
-	constants    []object.Object
-
-	lastInstruction     EmittedInstruction
-	previousInstruction EmittedInstruction
+	constants []object.Object
 
 	symbolTable *SymbolTable
+
+	scopes     []CompilationScope
+	scopeIndex int
 }
 
 type Bytecode struct {
@@ -28,13 +27,24 @@ type EmittedInstruction struct {
 	Position int
 }
 
+type CompilationScope struct {
+	instructions        code.Instructions
+	lastInstruction     EmittedInstruction
+	previousInstruction EmittedInstruction
+}
+
 func New() *Compiler {
-	return &Compiler{
+	mainScope := CompilationScope{
 		instructions:        code.Instructions{},
-		constants:           []object.Object{},
 		lastInstruction:     EmittedInstruction{},
 		previousInstruction: EmittedInstruction{},
-		symbolTable:         NewSymbolTable(),
+	}
+
+	return &Compiler{
+		constants:   []object.Object{},
+		symbolTable: NewSymbolTable(),
+		scopes:      []CompilationScope{mainScope},
+		scopeIndex:  0,
 	}
 }
 
@@ -48,9 +58,13 @@ func NewWithState(st *SymbolTable, constants []object.Object) *Compiler {
 
 func (c *Compiler) Bytecode() *Bytecode {
 	return &Bytecode{
-		Instructions: c.instructions,
+		Instructions: c.currentInstructions(),
 		Constants:    c.constants,
 	}
+}
+
+func (c *Compiler) currentInstructions() code.Instructions {
+	return c.scopes[c.scopeIndex].instructions
 }
 
 func (c *Compiler) Compile(node ast.Node) error {
@@ -85,6 +99,14 @@ func (c *Compiler) Compile(node ast.Node) error {
 		}
 		symbol := c.symbolTable.Define(node.Name.Value)
 		c.emit(code.OpSetGlobal, symbol.Index)
+
+    case *ast.ReturnStatement:
+        error := c.Compile(node.ReturnValue)
+        if error != nil {
+            return error
+        }
+
+        c.emit(code.OpReturnValue)
 
 	case *ast.InfixExpression:
 		if node.Operator == "<" {
@@ -164,7 +186,7 @@ func (c *Compiler) Compile(node ast.Node) error {
 
 		jumpPos := c.emit(code.OpJump, 9999)
 
-		afterConsequencePos := len(c.instructions)
+		afterConsequencePos := len(c.currentInstructions())
 		c.changeOperand(jumpNotTruePos, afterConsequencePos)
 
 		if node.Alternative == nil {
@@ -180,21 +202,21 @@ func (c *Compiler) Compile(node ast.Node) error {
 			}
 		}
 
-		afterAlternativePos := len(c.instructions)
+		afterAlternativePos := len(c.currentInstructions())
 		c.changeOperand(jumpPos, afterAlternativePos)
 
-    case *ast.IndexExpression:
-        error := c.Compile(node.Left)
-        if error != nil {
-            return error
-        }
+	case *ast.IndexExpression:
+		error := c.Compile(node.Left)
+		if error != nil {
+			return error
+		}
 
-        error = c.Compile(node.Index)
-        if error != nil {
-            return error
-        }
+		error = c.Compile(node.Index)
+		if error != nil {
+			return error
+		}
 
-        c.emit(code.OpIndex)
+		c.emit(code.OpIndex)
 
 	case *ast.IntegerLiteral:
 		integer := &object.Integer{Value: node.Value}
@@ -213,28 +235,41 @@ func (c *Compiler) Compile(node ast.Node) error {
 		}
 
 		c.emit(code.OpArray, len(node.Elements))
-    
-    case *ast.HashLiteral:
-        keys := []ast.Expression{}
-        for key := range node.Pairs {
-            keys = append(keys, key)
-        }
-        sort.Slice(keys, func(i, j int) bool {
-            return keys[i].String() < keys[j].String()
-        })
 
-        for _, key := range keys {
-            error := c.Compile(key)
-            if error != nil {
-                return error
-            }
-            error = c.Compile(node.Pairs[key])
-            if error != nil {
-                return error
-            }
-        }
+	case *ast.HashLiteral:
+		keys := []ast.Expression{}
+		for key := range node.Pairs {
+			keys = append(keys, key)
+		}
+		sort.Slice(keys, func(i, j int) bool {
+			return keys[i].String() < keys[j].String()
+		})
 
-        c.emit(code.OpHash, len(node.Pairs)*2)
+		for _, key := range keys {
+			error := c.Compile(key)
+			if error != nil {
+				return error
+			}
+			error = c.Compile(node.Pairs[key])
+			if error != nil {
+				return error
+			}
+		}
+
+		c.emit(code.OpHash, len(node.Pairs)*2)
+
+	case *ast.FunctionLiteral:
+		c.enterScope()
+
+		error := c.Compile(node.Body)
+		if error != nil {
+			return error
+		}
+
+		instructions := c.leaveScope()
+
+		compiledFn := &object.CompiledFunction{Instructions: instructions}
+		c.emit(code.OpConstant, c.addConstant(compiledFn))
 
 	case *ast.Boolean:
 		if node.Value {
@@ -268,37 +303,67 @@ func (c *Compiler) emit(op code.Opcode, operands ...int) int {
 }
 
 func (c *Compiler) addInstruction(instruction []byte) int {
-	positionOfNewInstruction := len(c.instructions)
-	c.instructions = append(c.instructions, instruction...)
+	positionOfNewInstruction := len(c.currentInstructions())
+	updatedInstructions := append(c.currentInstructions(), instruction...)
+
+	c.scopes[c.scopeIndex].instructions = updatedInstructions
+
 	return positionOfNewInstruction
 }
 
 func (c *Compiler) setLastInstruction(op code.Opcode, position int) {
-	previous := c.lastInstruction
+	previous := c.scopes[c.scopeIndex].lastInstruction
 	last := EmittedInstruction{Opcode: op, Position: position}
 
-	c.previousInstruction = previous
-	c.lastInstruction = last
+	c.scopes[c.scopeIndex].previousInstruction = previous
+	c.scopes[c.scopeIndex].lastInstruction = last
 }
 
 func (c *Compiler) lastInstructionIs(op code.Opcode) bool {
-	return c.lastInstruction.Opcode == op
+	return c.scopes[c.scopeIndex].lastInstruction.Opcode == op
 }
 
 func (c *Compiler) removeLastPop() {
-	c.instructions = c.instructions[:c.lastInstruction.Position]
-	c.lastInstruction = c.previousInstruction
+	last := c.scopes[c.scopeIndex].lastInstruction
+	previous := c.scopes[c.scopeIndex].previousInstruction
+
+	old := c.currentInstructions()
+	new := old[:last.Position]
+
+	c.scopes[c.scopeIndex].instructions = new
+	c.scopes[c.scopeIndex].lastInstruction = previous
 }
 
 func (c *Compiler) replaceInstruction(position int, newInstruction []byte) {
+	instructions := c.currentInstructions()
+
 	for i := 0; i < len(newInstruction); i++ {
-		c.instructions[position+i] = newInstruction[i]
+		instructions[position+i] = newInstruction[i]
 	}
 }
 
 func (c *Compiler) changeOperand(opPosition int, operand int) {
-	op := code.Opcode(c.instructions[opPosition])
+	op := code.Opcode(c.currentInstructions()[opPosition])
 	newInstruction := code.Make(op, operand)
 
 	c.replaceInstruction(opPosition, newInstruction)
+}
+
+func (c *Compiler) enterScope() {
+	scope := CompilationScope{
+		instructions:        code.Instructions{},
+		lastInstruction:     EmittedInstruction{},
+		previousInstruction: EmittedInstruction{},
+	}
+	c.scopes = append(c.scopes, scope)
+	c.scopeIndex++
+}
+
+func (c *Compiler) leaveScope() code.Instructions {
+	instructions := c.currentInstructions()
+
+	c.scopes = c.scopes[:len(c.scopes)-1]
+	c.scopeIndex--
+
+	return instructions
 }
