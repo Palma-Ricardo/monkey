@@ -53,6 +53,7 @@ const (
 	OpConstant Opcode = iota
 	OpNull
 	OpArray
+    OpHash
 
 	OpAdd
 	OpSub
@@ -86,6 +87,7 @@ var definitions = map[Opcode]*Definition{
 	OpConstant: {"OpConstant", []int{2}},
 	OpNull:     {"OpNull", []int{}},
 	OpArray:    {"OpArray", []int{2}},
+    OpHash:     {"OpHash", []int{2}},
 
 	OpAdd:   {"OpAdd", []int{}},
 	OpSub:   {"OpSub", []int{}},

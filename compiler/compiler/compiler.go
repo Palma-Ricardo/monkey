@@ -2,6 +2,7 @@ package compiler
 
 import (
 	"fmt"
+    "sort"
 	"monkey/ast"
 	"monkey/code"
 	"monkey/object"
@@ -199,6 +200,28 @@ func (c *Compiler) Compile(node ast.Node) error {
 		}
 
 		c.emit(code.OpArray, len(node.Elements))
+    
+    case *ast.HashLiteral:
+        keys := []ast.Expression{}
+        for key := range node.Pairs {
+            keys = append(keys, key)
+        }
+        sort.Slice(keys, func(i, j int) bool {
+            return keys[i].String() < keys[j].String()
+        })
+
+        for _, key := range keys {
+            error := c.Compile(key)
+            if error != nil {
+                return error
+            }
+            error = c.Compile(node.Pairs[key])
+            if error != nil {
+                return error
+            }
+        }
+
+        c.emit(code.OpHash, len(node.Pairs)*2)
 
 	case *ast.Boolean:
 		if node.Value {
