@@ -183,6 +183,19 @@ func (c *Compiler) Compile(node ast.Node) error {
 		afterAlternativePos := len(c.instructions)
 		c.changeOperand(jumpPos, afterAlternativePos)
 
+    case *ast.IndexExpression:
+        error := c.Compile(node.Left)
+        if error != nil {
+            return error
+        }
+
+        error = c.Compile(node.Index)
+        if error != nil {
+            return error
+        }
+
+        c.emit(code.OpIndex)
+
 	case *ast.IntegerLiteral:
 		integer := &object.Integer{Value: node.Value}
 		c.emit(code.OpConstant, c.addConstant(integer))
