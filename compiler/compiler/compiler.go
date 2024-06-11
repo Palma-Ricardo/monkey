@@ -100,13 +100,13 @@ func (c *Compiler) Compile(node ast.Node) error {
 		symbol := c.symbolTable.Define(node.Name.Value)
 		c.emit(code.OpSetGlobal, symbol.Index)
 
-    case *ast.ReturnStatement:
-        error := c.Compile(node.ReturnValue)
-        if error != nil {
-            return error
-        }
+	case *ast.ReturnStatement:
+		error := c.Compile(node.ReturnValue)
+		if error != nil {
+			return error
+		}
 
-        c.emit(code.OpReturnValue)
+		c.emit(code.OpReturnValue)
 
 	case *ast.InfixExpression:
 		if node.Operator == "<" {
@@ -218,6 +218,14 @@ func (c *Compiler) Compile(node ast.Node) error {
 
 		c.emit(code.OpIndex)
 
+	case *ast.CallExpression:
+		error := c.Compile(node.Function)
+		if error != nil {
+			return error
+		}
+
+		c.emit(code.OpCall)
+
 	case *ast.IntegerLiteral:
 		integer := &object.Integer{Value: node.Value}
 		c.emit(code.OpConstant, c.addConstant(integer))
@@ -264,6 +272,13 @@ func (c *Compiler) Compile(node ast.Node) error {
 		error := c.Compile(node.Body)
 		if error != nil {
 			return error
+		}
+
+		if c.lastInstructionIs(code.OpPop) {
+			c.replaceLastPopWithReturn()
+		}
+		if !c.lastInstructionIs(code.OpReturnValue) {
+			c.emit(code.OpReturn)
 		}
 
 		instructions := c.leaveScope()
@@ -320,6 +335,10 @@ func (c *Compiler) setLastInstruction(op code.Opcode, position int) {
 }
 
 func (c *Compiler) lastInstructionIs(op code.Opcode) bool {
+	if len(c.currentInstructions()) == 0 {
+		return false
+	}
+
 	return c.scopes[c.scopeIndex].lastInstruction.Opcode == op
 }
 
@@ -340,6 +359,13 @@ func (c *Compiler) replaceInstruction(position int, newInstruction []byte) {
 	for i := 0; i < len(newInstruction); i++ {
 		instructions[position+i] = newInstruction[i]
 	}
+}
+
+func (c *Compiler) replaceLastPopWithReturn() {
+	lastPos := c.scopes[c.scopeIndex].lastInstruction.Position
+	c.replaceInstruction(lastPos, code.Make(code.OpReturnValue))
+
+	c.scopes[c.scopeIndex].lastInstruction.Opcode = code.OpReturnValue
 }
 
 func (c *Compiler) changeOperand(opPosition int, operand int) {
