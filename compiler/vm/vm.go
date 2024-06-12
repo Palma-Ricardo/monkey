@@ -28,7 +28,7 @@ var Null = &object.Null{}
 
 func New(bytecode *compiler.Bytecode) *VM {
 	mainFn := &object.CompiledFunction{Instructions: bytecode.Instructions}
-	mainFrame := NewFrame(mainFn)
+	mainFrame := NewFrame(mainFn, 0)
 
 	frames := make([]*Frame, MaxFrames)
 	frames[0] = mainFrame
@@ -89,6 +89,25 @@ func (vm *VM) Run() error {
 			vm.currentFrame().instructionPointer += 2
 
 			error := vm.push(vm.globals[globalIndex])
+			if error != nil {
+				return error
+			}
+
+		case code.OpSetLocal:
+			localIndex := code.ReadUint8(instructions[instructionPointer+1:])
+			vm.currentFrame().instructionPointer += 1
+
+			frame := vm.currentFrame()
+
+			vm.stack[frame.basePointer+int(localIndex)] = vm.pop()
+
+		case code.OpGetLocal:
+			localIndex := code.ReadUint8(instructions[instructionPointer+1:])
+			vm.currentFrame().instructionPointer += 1
+
+			frame := vm.currentFrame()
+
+			error := vm.push(vm.stack[frame.basePointer+int(localIndex)])
 			if error != nil {
 				return error
 			}
@@ -154,28 +173,29 @@ func (vm *VM) Run() error {
 				return fmt.Errorf("calling non-function")
 			}
 
-			frame := NewFrame(fn)
+			frame := NewFrame(fn, vm.stackPointer)
 			vm.pushFrame(frame)
+			vm.stackPointer = frame.basePointer + fn.NumLocals
 
 		case code.OpReturnValue:
 			returnValue := vm.pop()
 
-			vm.popFrame()
-			vm.pop()
+            frame := vm.popFrame()
+			vm.stackPointer = frame.basePointer - 1
 
 			error := vm.push(returnValue)
 			if error != nil {
 				return error
 			}
 
-        case code.OpReturn:
-            vm.popFrame()
-            vm.pop()
-            
-            error := vm.push(Null)
-            if error != nil {
-                return error
-            }
+		case code.OpReturn:
+            frame := vm.popFrame()
+            vm.stackPointer = frame.basePointer - 1
+
+			error := vm.push(Null)
+			if error != nil {
+				return error
+			}
 
 		case code.OpEqual, code.OpNotEqual, code.OpGreaterThan:
 			error := vm.executeComparison(op)
