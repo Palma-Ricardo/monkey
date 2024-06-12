@@ -42,6 +42,8 @@ func (ins Instructions) fmtInstruction(definition *Definition, operands []int) s
 		return definition.Name
 	case 1:
 		return fmt.Sprintf("%s %d", definition.Name, operands[0])
+	case 2:
+		return fmt.Sprintf("%s %d %d", definition.Name, operands[0], operands[1])
 	}
 
 	return fmt.Sprintf("ERROR: unhandled operandCount for %s\n", definition.Name)
@@ -55,6 +57,7 @@ const (
 	OpArray
 	OpHash
 	OpIndex
+	OpClosure
 
 	OpAdd
 	OpSub
@@ -82,6 +85,7 @@ const (
 	OpGetLocal
 	OpSetLocal
 	OpGetBuiltin
+	OpGetFree
 
 	OpPop
 )
@@ -97,6 +101,7 @@ var definitions = map[Opcode]*Definition{
 	OpArray:    {"OpArray", []int{2}},
 	OpHash:     {"OpHash", []int{2}},
 	OpIndex:    {"OpIndex", []int{}},
+	OpClosure:  {"OpClosure", []int{2, 1}},
 
 	OpAdd:   {"OpAdd", []int{}},
 	OpSub:   {"OpSub", []int{}},
@@ -124,6 +129,7 @@ var definitions = map[Opcode]*Definition{
 	OpGetLocal:   {"OpGetLocal", []int{1}},
 	OpSetLocal:   {"OpSetLocal", []int{1}},
 	OpGetBuiltin: {"OpGetBuiltin", []int{1}},
+	OpGetFree:    {"OpGetFree", []int{1}},
 
 	OpPop: {"OpPop", []int{}},
 }

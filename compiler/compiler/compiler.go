@@ -303,15 +303,21 @@ func (c *Compiler) Compile(node ast.Node) error {
 			c.emit(code.OpReturn)
 		}
 
+        freeSymbols := c.symbolTable.FreeSymbols
 		numLocals := c.symbolTable.numberOfDefinitions
 		instructions := c.leaveScope()
+
+        for _, symbol := range freeSymbols {
+            c.loadSymbol(symbol)
+        }
 
 		compiledFn := &object.CompiledFunction{
 			Instructions:  instructions,
 			NumLocals:     numLocals,
 			NumParameters: len(node.Parameters),
 		}
-		c.emit(code.OpConstant, c.addConstant(compiledFn))
+		fnIndex := c.addConstant(compiledFn)
+		c.emit(code.OpClosure, fnIndex, len(freeSymbols))
 
 	case *ast.Boolean:
 		if node.Value {
@@ -431,5 +437,7 @@ func (c *Compiler) loadSymbol(sym Symbol) {
 		c.emit(code.OpGetLocal, sym.Index)
 	case BuiltinScope:
 		c.emit(code.OpGetBuiltin, sym.Index)
+	case FreeScope:
+		c.emit(code.OpGetFree, sym.Index)
 	}
 }
