@@ -58,6 +58,7 @@ const (
 	OpHash
 	OpIndex
 	OpClosure
+	OpCurrentClosure
 
 	OpAdd
 	OpSub
@@ -96,12 +97,13 @@ type Definition struct {
 }
 
 var definitions = map[Opcode]*Definition{
-	OpConstant: {"OpConstant", []int{2}},
-	OpNull:     {"OpNull", []int{}},
-	OpArray:    {"OpArray", []int{2}},
-	OpHash:     {"OpHash", []int{2}},
-	OpIndex:    {"OpIndex", []int{}},
-	OpClosure:  {"OpClosure", []int{2, 1}},
+	OpConstant:       {"OpConstant", []int{2}},
+	OpNull:           {"OpNull", []int{}},
+	OpArray:          {"OpArray", []int{2}},
+	OpHash:           {"OpHash", []int{2}},
+	OpIndex:          {"OpIndex", []int{}},
+	OpClosure:        {"OpClosure", []int{2, 1}},
+	OpCurrentClosure: {"OpCurrentClosure", []int{}},
 
 	OpAdd:   {"OpAdd", []int{}},
 	OpSub:   {"OpSub", []int{}},

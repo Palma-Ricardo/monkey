@@ -124,16 +124,16 @@ func (vm *VM) Run() error {
 				return error
 			}
 
-        case code.OpGetFree:
-            freeIndex := code.ReadUint8(instructions[instructionPointer+1:])
-            vm.currentFrame().instructionPointer += 1
+		case code.OpGetFree:
+			freeIndex := code.ReadUint8(instructions[instructionPointer+1:])
+			vm.currentFrame().instructionPointer += 1
 
-            currentClosure := vm.currentFrame().cl
-            
-            error := vm.push(currentClosure.Free[freeIndex])
-            if error != nil {
-                return error
-            }
+			currentClosure := vm.currentFrame().cl
+
+			error := vm.push(currentClosure.Free[freeIndex])
+			if error != nil {
+				return error
+			}
 
 		case code.OpArray:
 			numberElements := int(code.ReadUint16(instructions[instructionPointer+1:]))
@@ -169,6 +169,13 @@ func (vm *VM) Run() error {
 			vm.currentFrame().instructionPointer += 3
 
 			error := vm.pushClosure(int(constIndex), int(numFree))
+			if error != nil {
+				return error
+			}
+
+		case code.OpCurrentClosure:
+			currentClosure := vm.currentFrame().cl
+			error := vm.push(currentClosure)
 			if error != nil {
 				return error
 			}

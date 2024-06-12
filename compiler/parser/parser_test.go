@@ -630,6 +630,37 @@ func TestParsingEmptyHashLiteral(tester *testing.T) {
 	}
 }
 
+func TestFunctionLitearlWithName(tester *testing.T) {
+	input := "let myFunction = fn() { };"
+
+	lexer := lexer.New(input)
+	parser := New(lexer)
+	program := parser.ParseProgram()
+	checkParserErrors(tester, parser)
+
+	if len(program.Statements) != 1 {
+		tester.Fatalf("program.Body does not contain %d statements. got=%d\n",
+			1, len(program.Statements))
+	}
+
+	statement, ok := program.Statements[0].(*ast.LetStatement)
+	if !ok {
+		tester.Fatalf("program.Statements[0] is not ast.LetStatement. got=%T",
+			program.Statements[0])
+	}
+
+	function, ok := statement.Value.(*ast.FunctionLiteral)
+	if !ok {
+		tester.Fatalf("stmt.Value is not ast.FunctionLiteral. got=%T",
+			statement.Value)
+	}
+
+	if function.Name != "myFunction" {
+		tester.Fatalf("function literal name wrong. want 'myFunction', got=%q\n",
+			function.Name)
+	}
+}
+
 func testLetStatement(tester *testing.T, statement ast.Statement, name string) bool {
 	if statement.TokenLiteral() != "let" {
 		tester.Errorf("statement.TokenLiteral not 'let'. got=%q", statement.TokenLiteral())
