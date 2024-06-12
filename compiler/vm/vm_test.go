@@ -353,10 +353,10 @@ func TestFirstClassFunctions(tester *testing.T) {
 			input:    "let returnsOne = fn() { 1; }; let returnsOneReturner = fn() { returnsOne; }; returnsOneReturner()();",
 			expected: 1,
 		},
-        {
-            input: "let returnsOneReturner = fn() { let returnsOne = fn() { 1; };  returnsOne;}; returnsOneReturner()();",
-            expected: 1,
-        },
+		{
+			input:    "let returnsOneReturner = fn() { let returnsOne = fn() { 1; };  returnsOne;}; returnsOneReturner()();",
+			expected: 1,
+		},
 	}
 
 	runVmTests(tester, tests)
@@ -374,19 +374,88 @@ func TestCallingFunctionsWithBindings(tester *testing.T) {
             oneAndTwo() + threeAndFour();`,
 			expected: 10,
 		},
-        {
-            input: `let firstFoobar = fn() { let foobar = 50; foobar; };
+		{
+			input: `let firstFoobar = fn() { let foobar = 50; foobar; };
             let secondFoobar = fn() { let foobar = 100; foobar; };
             firstFoobar() + secondFoobar();`,
-            expected: 150,
-        },
-        {
-            input: `let globalSeed = 50; let minusOne = fn() { let num = 1; globalSeed - num;}
+			expected: 150,
+		},
+		{
+			input: `let globalSeed = 50; let minusOne = fn() { let num = 1; globalSeed - num;}
             let minusTwo = fn() { let num = 2; globalSeed - num; }
             minusOne() + minusTwo();`,
-            expected: 97,
-        },
+			expected: 97,
+		},
 	}
 
 	runVmTests(tester, tests)
+}
+
+func TestCallingFunctionsWithArgumentsAndBindings(tester *testing.T) {
+	tests := []vmTestCase{
+		{
+			input:    "let identity = fn(a) { a; }; identity(4);",
+			expected: 4,
+		},
+		{
+			input:    "let sum = fn(a, b) { a + b; }; sum(1, 2);",
+			expected: 3,
+		},
+		{
+			input:    "let sum = fn(a, b) { let c = a + b; c;}; sum(1, 2);",
+			expected: 3,
+		},
+		{
+			input:    "let sum = fn(a, b) { let c = a + b; c; }; sum(1, 2) + sum(3, 4);",
+			expected: 10,
+		},
+		{
+			input:    "let sum = fn(a, b) { let c = a + b; c; }; let outer = fn() { sum(1, 2) + sum(3, 4); }; outer();",
+			expected: 10,
+		},
+		{
+			input: `let globalNum = 10; let sum = fn(a, b) { let c = a + b; c + globalNum; };
+            let outer = fn() { sum(1, 2) + sum(3, 4) + globalNum; }; outer() + globalNum;`,
+			expected: 50,
+		},
+	}
+
+	runVmTests(tester, tests)
+}
+
+func TestCallingFunctionsWithWrongArguments(tester *testing.T) {
+	tests := []vmTestCase{
+		{
+			input:    "fn () { 1; }(1);",
+			expected: "wrong number of arguments: want=0, got=1",
+		},
+		{
+			input:    "fn(a) { a; }();",
+			expected: "wrong number of arguments: want=1, got=0",
+		},
+		{
+			input:    "fn(a, b) { a + b; }(1);",
+			expected: "wrong number of arguments: want=2, got=1",
+		},
+	}
+
+	for _, testcase := range tests {
+		program := parse(testcase.input)
+
+		comp := compiler.New()
+		error := comp.Compile(program)
+		if error != nil {
+			tester.Fatalf("compiler error: %s", error)
+		}
+
+		vm := New(comp.Bytecode())
+		error = vm.Run()
+		if error == nil {
+			tester.Fatalf("expected VM error but resulted in none.")
+		}
+
+		if error.Error() != testcase.expected {
+			tester.Fatalf("wrong VM error: want=%q, got=%q", testcase.expected, error)
+		}
+	}
 }

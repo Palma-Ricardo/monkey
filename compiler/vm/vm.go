@@ -168,19 +168,18 @@ func (vm *VM) Run() error {
 			}
 
 		case code.OpCall:
-			fn, ok := vm.stack[vm.stackPointer-1].(*object.CompiledFunction)
-			if !ok {
-				return fmt.Errorf("calling non-function")
-			}
+			numArgs := code.ReadUint8(instructions[instructionPointer+1:])
+			vm.currentFrame().instructionPointer += 1
 
-			frame := NewFrame(fn, vm.stackPointer)
-			vm.pushFrame(frame)
-			vm.stackPointer = frame.basePointer + fn.NumLocals
+			error := vm.callFunction(int(numArgs))
+			if error != nil {
+				return error
+			}
 
 		case code.OpReturnValue:
 			returnValue := vm.pop()
 
-            frame := vm.popFrame()
+			frame := vm.popFrame()
 			vm.stackPointer = frame.basePointer - 1
 
 			error := vm.push(returnValue)
@@ -189,8 +188,8 @@ func (vm *VM) Run() error {
 			}
 
 		case code.OpReturn:
-            frame := vm.popFrame()
-            vm.stackPointer = frame.basePointer - 1
+			frame := vm.popFrame()
+			vm.stackPointer = frame.basePointer - 1
 
 			error := vm.push(Null)
 			if error != nil {
@@ -467,4 +466,22 @@ func (vm *VM) pushFrame(f *Frame) {
 func (vm *VM) popFrame() *Frame {
 	vm.frameIndex--
 	return vm.frames[vm.frameIndex]
+}
+
+func (vm *VM) callFunction(numArgs int) error {
+	fn, ok := vm.stack[vm.stackPointer-1-numArgs].(*object.CompiledFunction)
+	if !ok {
+		return fmt.Errorf("calling non-function")
+	}
+
+	if numArgs != fn.NumParameters {
+		return fmt.Errorf("wrong number of arguments: want=%d, got=%d", fn.NumParameters, numArgs)
+	}
+
+	frame := NewFrame(fn, vm.stackPointer-numArgs)
+	vm.pushFrame(frame)
+
+	vm.stackPointer = frame.basePointer + fn.NumLocals
+
+	return nil
 }

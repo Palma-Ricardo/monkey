@@ -114,7 +114,7 @@ var definitions = map[Opcode]*Definition{
 	OpJumpNotTrue: {"OpJumpNotTrue", []int{2}},
 	OpJump:        {"OpJump", []int{2}},
 
-	OpCall:        {"OpCall", []int{}},
+	OpCall:        {"OpCall", []int{1}},
 	OpReturnValue: {"OpReturnValue", []int{}},
 	OpReturn:      {"OpReturn", []int{}},
 
