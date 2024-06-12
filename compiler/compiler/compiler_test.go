@@ -695,7 +695,7 @@ func TestFunctionCalls(tester *testing.T) {
 			input: `let oneArg = fn(a) { a }; oneArg(24);`,
 			expectedConstants: []interface{}{
 				[]code.Instructions{
-                    code.Make(code.OpGetLocal, 0),
+					code.Make(code.OpGetLocal, 0),
 					code.Make(code.OpReturnValue),
 				},
 				24,
@@ -713,11 +713,11 @@ func TestFunctionCalls(tester *testing.T) {
 			input: "let manyArg = fn(a, b, c) { a; b; c }; manyArg(24, 25, 26);",
 			expectedConstants: []interface{}{
 				[]code.Instructions{
-                    code.Make(code.OpGetLocal, 0),
-                    code.Make(code.OpPop),
-                    code.Make(code.OpGetLocal, 1),
-                    code.Make(code.OpPop),
-                    code.Make(code.OpGetLocal, 2),
+					code.Make(code.OpGetLocal, 0),
+					code.Make(code.OpPop),
+					code.Make(code.OpGetLocal, 1),
+					code.Make(code.OpPop),
+					code.Make(code.OpGetLocal, 2),
 					code.Make(code.OpReturnValue),
 				},
 				24, 25, 26,
@@ -789,6 +789,46 @@ func TestLetStatementScopes(tester *testing.T) {
 			},
 			expectedInstructions: []code.Instructions{
 				code.Make(code.OpConstant, 2),
+				code.Make(code.OpPop),
+			},
+		},
+	}
+
+	runCompilerTests(tester, tests)
+}
+
+func TestBuiltins(tester *testing.T) {
+	tests := []compilerTestCase{
+		{
+			input: `
+            len([]);
+            push([], 1);
+            `,
+			expectedConstants: []interface{}{1},
+			expectedInstructions: []code.Instructions{
+				code.Make(code.OpGetBuiltin, 0),
+				code.Make(code.OpArray, 0),
+				code.Make(code.OpCall, 1),
+				code.Make(code.OpPop),
+				code.Make(code.OpGetBuiltin, 5),
+				code.Make(code.OpArray, 0),
+				code.Make(code.OpConstant, 0),
+				code.Make(code.OpCall, 2),
+				code.Make(code.OpPop),
+			},
+		},
+		{
+			input: `fn() { len([]) }`,
+			expectedConstants: []interface{}{
+				[]code.Instructions{
+					code.Make(code.OpGetBuiltin, 0),
+					code.Make(code.OpArray, 0),
+					code.Make(code.OpCall, 1),
+					code.Make(code.OpReturnValue),
+				},
+			},
+			expectedInstructions: []code.Instructions{
+				code.Make(code.OpConstant, 0),
 				code.Make(code.OpPop),
 			},
 		},

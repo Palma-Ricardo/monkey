@@ -284,7 +284,11 @@ func applyFunction(fn object.Object, arguments []object.Object) object.Object {
 		return unwrapReturnValue(evaluated)
 
 	case *object.Builtin:
-		return function.Fn(arguments...)
+        if result := function.Fn(arguments...); result != nil {
+            return result
+        }
+
+		return NULL
 	default:
 		return newError("not a function: %s", function.Type())
 	}
