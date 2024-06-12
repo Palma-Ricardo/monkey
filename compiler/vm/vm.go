@@ -112,6 +112,17 @@ func (vm *VM) Run() error {
 				return error
 			}
 
+		case code.OpGetBuiltin:
+			builtinIndex := code.ReadUint8(instructions[instructionPointer+1:])
+			vm.currentFrame().instructionPointer += 1
+
+			definition := object.Builtins[builtinIndex]
+
+			error := vm.push(definition.Builtin)
+			if error != nil {
+				return error
+			}
+
 		case code.OpArray:
 			numberElements := int(code.ReadUint16(instructions[instructionPointer+1:]))
 			vm.currentFrame().instructionPointer += 2
@@ -171,7 +182,7 @@ func (vm *VM) Run() error {
 			numArgs := code.ReadUint8(instructions[instructionPointer+1:])
 			vm.currentFrame().instructionPointer += 1
 
-			error := vm.callFunction(int(numArgs))
+			error := vm.executeCall(int(numArgs))
 			if error != nil {
 				return error
 			}
@@ -468,7 +479,19 @@ func (vm *VM) popFrame() *Frame {
 	return vm.frames[vm.frameIndex]
 }
 
-func (vm *VM) callFunction(numArgs int) error {
+func (vm *VM) executeCall(numArgs int) error {
+	callee := vm.stack[vm.stackPointer-1-numArgs]
+	switch callee := callee.(type) {
+	case *object.CompiledFunction:
+		return vm.callFunction(callee, numArgs)
+	case *object.Builtin:
+		return vm.callBuiltin(callee, numArgs)
+	default:
+		return fmt.Errorf("calling non-function and non-built-in")
+	}
+}
+
+func (vm *VM) callFunction(fn *object.CompiledFunction, numArgs int) error {
 	fn, ok := vm.stack[vm.stackPointer-1-numArgs].(*object.CompiledFunction)
 	if !ok {
 		return fmt.Errorf("calling non-function")
@@ -482,6 +505,21 @@ func (vm *VM) callFunction(numArgs int) error {
 	vm.pushFrame(frame)
 
 	vm.stackPointer = frame.basePointer + fn.NumLocals
+
+	return nil
+}
+
+func (vm *VM) callBuiltin(builtin *object.Builtin, numArgs int) error {
+	args := vm.stack[vm.stackPointer-numArgs : vm.stackPointer]
+
+	result := builtin.Fn(args...)
+	vm.stackPointer = vm.stackPointer - numArgs - 1
+
+	if result != nil {
+		vm.push(result)
+	} else {
+		vm.push(Null)
+	}
 
 	return nil
 }
